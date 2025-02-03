@@ -10,17 +10,19 @@ const StarAnimation = () => {
   const [blinkCountState, setBlinkCountState] = useState(0);
   const gameStartRef = useRef(Date.now());
 
-  // Function to restart the game automatically
-  const restartGame = () => {
-    setGameOver(false);
-    setT(0);
-    setDirection(1);
-    setBlinkCountState(0);
-    gameStartRef.current = Date.now();
-  };
+  // Function to stop the game after 10 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setGameOver(true);
+    }, 10000); // Stop game after 10 sec
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch blink data from backend
   useEffect(() => {
+    if (gameOver) return; // Stop fetching if game is over
+
     const fetchBlinkData = async () => {
       try {
         const response = await fetch("http://localhost:5000/blink-data");
@@ -35,21 +37,12 @@ const StarAnimation = () => {
 
     const interval = setInterval(fetchBlinkData, 500);
     return () => clearInterval(interval);
-  }, []);
-
-  // Restart the game every 10 seconds
-  useEffect(() => {
-    const timer = setInterval(restartGame, 10000); // Restart every 10 sec
-    return () => clearInterval(timer);
-  }, []);
-
-  // Log the blink count whenever it updates
-  useEffect(() => {
-    console.log("Blink Count Updated:", blinkCountState);
-  }, [blinkCountState]);
+  }, [gameOver]);
 
   // Animate the ball movement along the star's path
   useEffect(() => {
+    if (gameOver) return; // Stop animation when game is over
+
     const animate = () => {
       setT((prevT) => {
         let newT = prevT + direction * speed;
@@ -63,12 +56,12 @@ const StarAnimation = () => {
 
     const interval = setInterval(animate, 16); // Animation speed (approx 60 FPS)
     return () => clearInterval(interval);
-  }, [direction]);
+  }, [direction, gameOver]);
 
   // Drawing the star and ball
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || gameOver) return;
 
     const ctx = canvas.getContext("2d");
     const centerX = 400;
@@ -116,13 +109,14 @@ const StarAnimation = () => {
     };
 
     drawBall();
-  }, [t]);
+  }, [t, gameOver]);
 
   return (
     <div>
       <h1>Eye Tracking Star Game</h1>
       <canvas ref={canvasRef} width={800} height={600}></canvas>
       <p>Blink Count: {blinkCountState}</p>
+      {gameOver && <h2>Game Over</h2>}
     </div>
   );
 };
